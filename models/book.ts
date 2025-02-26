@@ -1,6 +1,7 @@
 import mongoose, { Schema, Document, Model, FilterQuery } from 'mongoose';
 import Author, { IAuthor } from './author';
 import Genre, { IGenre } from './genre';
+import BookInstance from './bookinstance';
 
 /**
  * A type that represents a book document in the books collection.
@@ -32,10 +33,12 @@ export interface IBook extends Document {
  * @extends Model
  * @property {Function} getAllBooksWithAuthors - A function to get all books with authors.
  * @property {Function} getBookCount - A function to get the count of books.
+ * @property {Function} getBookDetails - A function to get the details of the book
  */
 interface IBookModel extends Model<IBook> {
   getAllBooksWithAuthors(projectionOpts: string, sortOpts?: { [key: string]: 1 | -1 }): Promise<IBook[]>;
   getBookCount(fitler?: FilterQuery<IBook>): Promise<number>;
+  getBookDetails(id: string): Promise<{}>;
 }
 
 /**
@@ -84,6 +87,24 @@ BookSchema.statics.getBookCount = async function (filter?: FilterQuery<IBook>): 
 }
 
 /**
+ * Retrieves details of a book, including its title, author, and available copies.
+ * @param id - The unique identifier of the book.
+ * @returns A promise that resolves to an object containing the book's title, author, and copies.
+ */
+BookSchema.statics.getBookDetails = async function (id: string): Promise<{}> {
+  const book = await Book.findOne({ _id: id });
+
+  const bookInstance = await BookInstance.find({ book: book });
+
+  const data = {
+    title: book?.title ,
+    author: book?.author.name,
+    copies: bookInstance
+  }
+  return data;
+}
+
+/**
  * retrieves an existing author by name and an existing genre by name,
  * and saves a new book in this collection with the provided title, summary, and ISBN.
  * @param author_family_name 
@@ -105,6 +126,8 @@ BookSchema.methods.saveBookOfExistingAuthorAndGenre = async function (author_fam
   this.genre = [genreId];
   return await this.save();  
 }
+
+
 
 /**
  * Compile the schema into a model and export it.
